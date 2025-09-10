@@ -1,101 +1,149 @@
-// App v4 - Inbox + drag&drop + reminders integration (client-side)
-// Configure BOT_API_BASE in index.html to point to your bot server when deployed.
-
-const STORAGE_KEY = "gamify_v4_data";
+// RPG Gamifier v5 — state, UI, bot API hooks
+const STORAGE_KEY = "rpg_v5_state";
 function genId(){ return 'id'+Math.random().toString(36).slice(2,9) }
-const defaultState = { xp:0, level:1, xpLog:[], tasks:{short:[], mid:[], long:[], boss:[], inbox:[], archive:[]}, rewards:[], achievements:[] };
-let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || defaultState;
 
-// seed if empty
-if(state.tasks.short.length===0 && state.tasks.mid.length===0 && state.tasks.long.length===0 && state.tasks.boss.length===0){
-  state.tasks.short = [{id:genId(),title:"Читать 15 минут",XP:10,done:false,when:null},{id:genId(),title:"Написать 200 слов",XP:10,done:false,when:null},{id:genId(),title:"Пройти 1км",XP:10,done:false,when:null},{id:genId(),title:"Написать 1 пост",XP:10,done:false,when:null}];
-  state.tasks.mid = [{id:genId(),title:"Записать подкаст",XP:30,done:false,when:null},{id:genId(),title:"Смонтировать видео",XP:30,done:false,when:null},{id:genId(),title:"Смонтировать подкаст",XP:30,done:false,when:null}];
-  state.tasks.long = [{id:genId(),title:"Выложить видео по Героям Энвелла",XP:100,done:false,when:null},{id:genId(),title:"Выложить подкаст",XP:100,done:false,when:null}];
-  state.tasks.boss = [{id:genId(),title:"Первое миллионое видео",XP:1000,done:false,when:null}];
-  state.rewards = [{id:genId(),title:"🍫 Сладость",cost:20,bought:false},{id:genId(),title:"☕ Час отдыха",cost:30,bought:false},{id:genId(),title:"🎬 Поход в кино",cost:150,bought:false},{id:genId(),title:"🎧 Новый микрофон",cost:500,bought:false}];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+const defaultState = {
+  xp:0, level:1, xpToLevel: 100,
+  stats:{STR:0, INT:0, CHA:0},
+  avatar:"hero1.png",
+  tasks:{inbox:[], short:[], mid:[], long:[], boss:[], archive:[]},
+  rewards:[
+    {id:genId(), title:"🍫 Сладость", cost:20, bought:false},
+    {id:genId(), title:"☕ Час отдыха", cost:30, bought:false},
+    {id:genId(), title:"🎬 Поход в кино", cost:150, bought:false},
+    {id:genId(), title:"🛡️ RPG-скин", cost:250, bought:false}
+  ],
+  achievements:[{id:genId(), title:"Добро пожаловать!"}],
+  xpLog:[]
+};
+
+let state = load() || seedDefault();
+
+function seedDefault(){
+  const s = JSON.parse(JSON.stringify(defaultState));
+  s.tasks.short = [
+    {id:genId(), title:"Читать 15 минут", XP:10, stat:"INT", when:null, done:false},
+    {id:genId(), title:"Написать 200 слов", XP:10, stat:"INT", when:null, done:false},
+    {id:genId(), title:"Пройти 1км", XP:10, stat:"STR", when:null, done:false},
+    {id:genId(), title:"Написать 1 пост", XP:10, stat:"CHA", when:null, done:false}
+  ];
+  s.tasks.mid = [
+    {id:genId(), title:"Записать подкаст", XP:30, stat:"CHA", when:null, done:false},
+    {id:genId(), title:"Смонтировать видео", XP:30, stat:"INT", when:null, done:false},
+    {id:genId(), title:"Смонтировать подкаст", XP:30, stat:"INT", when:null, done:false}
+  ];
+  s.tasks.long = [
+    {id:genId(), title:"Выложить видео по Героям Энвелла", XP:100, stat:"CHA", when:null, done:false},
+    {id:genId(), title:"Выложить подкаст", XP:100, stat:"CHA", when:null, done:false}
+  ];
+  s.tasks.boss = [
+    {id:genId(), title:"Первое миллионое видео", XP:1000, stat:"CHA", when:null, done:false}
+  ];
+  save(s); return s;
 }
 
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function renderAll(){ renderInbox(); renderBuckets(); renderShop(); renderAchievements(); renderLevel(); document.getElementById('currentXP').innerText = getBalance(); }
+function save(s=state){ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e){ return null; } }
 
-function createTaskElement(t,bucket){
-  const el = document.createElement('div'); el.className='task-card'+(t.done?' done':'');
-  el.draggable = true; el.dataset.id = t.id; el.dataset.bucket = bucket;
-  el.innerHTML = `<div><input type="checkbox" ${t.done?'checked':''} class="check"> <strong>${t.title}</strong> <small class="muted">(+${t.XP} XP)</small>${t.when?(' <small>⏰ '+new Date(t.when).toLocaleString()+'</small>'):''}</div><div><button class="btn-archive">📦</button> <button class="btn-delete">🗑</button></div>`;
-  el.querySelector('.check').addEventListener('change', ()=> toggleDone(t.id,bucket));
-  el.querySelector('.btn-archive').addEventListener('click', ()=> archiveTask(t.id,bucket));
-  el.querySelector('.btn-delete').addEventListener('click', ()=> deleteTask(t.id,bucket));
-  el.addEventListener('dragstart', e=> { el.classList.add('dragging'); e.dataTransfer.setData('text/plain', JSON.stringify({id:t.id, bucket})); });
-  el.addEventListener('dragend', e=> { el.classList.remove('dragging'); });
-  return el;
+async function api(path, body){
+  if(typeof BOT_API_BASE === 'undefined' || !BOT_API_BASE || BOT_API_BASE.includes('REPLACE')){
+    document.getElementById('apiStatus').innerText = 'API: offline'; return null;
+  }
+  document.getElementById('apiStatus').innerText = 'API: online';
+  try{
+    const res = await fetch(BOT_API_BASE + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {})});
+    return res.ok ? res.json() : null;
+  }catch(e){ console.warn(e); return null; }
 }
 
-function renderInbox(){
-  const container = document.querySelector('.inbox');
-  const existingList = container.querySelector('.card-list'); if(existingList) existingList.remove();
-  const list = document.createElement('div'); list.className='card-list';
-  state.tasks.inbox.forEach(t=> list.appendChild(createTaskElement(t,'inbox')));
-  container.appendChild(list);
-  document.getElementById('inboxAdd').onclick = async ()=> {
-    const title = document.getElementById('inboxText').value.trim(); if(!title) return;
-    const xp = Number(document.getElementById('inboxXP').value)||10;
-    const when = document.getElementById('inboxDate').value || null;
-    const item = {id:genId(), title, XP:xp, done:false, when: when? new Date(when).toISOString(): null};
-    state.tasks.inbox.unshift(item); saveState(); renderAll(); document.getElementById('inboxText').value=''; document.getElementById('inboxXP').value='10'; document.getElementById('inboxDate').value='';
-    // notify server to register reminder if BOT_API_BASE set
-    if(typeof BOT_API_BASE !== 'undefined' && BOT_API_BASE && !BOT_API_BASE.includes('REPLACE')){
-      fetch(BOT_API_BASE + '/register_reminder', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({chat_id:'default', task:item})}).catch(e=>console.warn(e));
-    }
-  };
-  // enable drop from inbox to buckets; buckets have drop handlers elsewhere
-}
+function render(){
+  document.getElementById('avatarImg').src = 'assets/' + state.avatar;
+  document.getElementById('statSTR').innerText = state.stats.STR;
+  document.getElementById('statINT').innerText = state.stats.INT;
+  document.getElementById('statCHA').innerText = state.stats.CHA;
+  document.getElementById('levelNum').innerText = state.level;
+  document.getElementById('currentXP').innerText = getBalanceXP();
+  const pct = Math.min(100, Math.round((state.xp/state.xpToLevel)*100)); document.getElementById('xpFill').style.width = pct + '%';
 
-function renderBuckets(){
-  ['short','mid','long','boss'].forEach(bucket=>{
-    const container = document.getElementById(bucket+'List'); container.innerHTML='';
-    state.tasks[bucket].forEach(t=> container.appendChild(createTaskElement(t,bucket)));
-    container.ondrop = e=> { e.preventDefault(); try{ const data = JSON.parse(e.dataTransfer.getData('text/plain')); moveTaskToBucket(data.id, data.bucket, bucket); }catch(err){console.warn(err);} };
-  });
-}
+  const inboxList = document.getElementById('inboxList'); inboxList.innerHTML='';
+  state.tasks.inbox.forEach(t=> inboxList.appendChild(taskItem(t,'inbox')));
+  ['short','mid','long','boss'].forEach(b=>{ const el = document.getElementById(b+'List'); el.innerHTML=''; state.tasks[b].forEach(t=> el.appendChild(taskItem(t,b))); });
 
-function renderShop(){
   const shop = document.getElementById('shopList'); shop.innerHTML='';
   state.rewards.forEach(r=>{
-    const el = document.createElement('div'); el.className='task-card';
-    const can = getBalance() >= r.cost && !r.bought;
-    el.innerHTML = `<div><strong>${r.title}</strong> <small class="muted">(${r.cost} XP)</small></div><div><button ${can? '': 'disabled'} class="buy-btn" data-id="${r.id}">${r.bought? '✓' : 'Купить'}</button> <button class="del-reward" data-id="${r.id}">🗑</button></div>`;
-    el.querySelector('.buy-btn').addEventListener('click', ()=> buyReward(r.id));
-    el.querySelector('.del-reward').addEventListener('click', ()=> deleteReward(r.id));
-    shop.appendChild(el);
+    const can = getBalanceXP() >= r.cost && !r.bought;
+    const row = el('div','item',`<div><strong>${r.title}</strong> <span class="meta">(${r.cost} XP)</span></div><div><button class="btn primary" ${can?'':'disabled'} data-id="${r.id}">${r.bought?'✓':'Купить'}</button> <button class="btn" data-del="${r.id}">🗑</button></div>`);
+    row.querySelector('[data-id]')?.addEventListener('click', ()=> buyReward(r.id));
+    row.querySelector('[data-del]')?.addEventListener('click', ()=> deleteReward(r.id));
+    shop.appendChild(row);
   });
-  document.getElementById('addReward').onclick = ()=> { const title=document.getElementById('addRewardText').value.trim(); const cost=Number(document.getElementById('addRewardCost').value)||50; if(!title) return; state.rewards.unshift({id:genId(), title, cost, bought:false}); saveState(); renderAll(); document.getElementById('addRewardText').value=''; document.getElementById('addRewardCost').value='50'; };
+
+  const ach = document.getElementById('achList'); ach.innerHTML=''; state.achievements.forEach(a=> ach.appendChild(el('div','badge', a.title)));
 }
 
-function renderAchievements(){ const el=document.getElementById('achList'); el.innerHTML=''; state.achievements.forEach(a=>{ const c=document.createElement('div'); c.className='task-card ach-card'; c.innerText = a.title; el.appendChild(c); }); document.getElementById('addAch').onclick = ()=> { const v=document.getElementById('addAchText').value.trim(); if(!v) return; state.achievements.unshift({id:genId(), title:v, ts:Date.now()}); saveState(); renderAll(); document.getElementById('addAchText').value=''; }; }
+function el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!==undefined) d.innerHTML=html; return d; }
 
-function renderLevel(){ document.getElementById('levelNum').innerText = state.level; const pct=Math.round((state.xp / (state.level*100))*100); document.getElementById('levelProgress').style.width = Math.min(100,pct) + '%'; document.getElementById('currentXP').innerText = getBalance(); }
+function taskItem(t, bucket){
+  const row = el('div','item'+(t.done?' done':''));
+  row.draggable = true; row.dataset.id = t.id; row.dataset.bucket = bucket;
+  row.innerHTML = `<div><input type="checkbox" class="chk" ${t.done?'checked':''}> <strong>${t.title}</strong> <span class="meta">+${t.XP} XP${t.stat? ' • '+t.stat:''}${t.when? ' • ⏰ '+new Date(t.when).toLocaleString(): ''}</span></div><div><button class="btn" data-arc="${t.id}">📦</button> <button class="btn warn" data-del="${t.id}">🗑</button></div>`;
+  row.querySelector('.chk').addEventListener('change', ()=> toggleDone(t.id, bucket));
+  row.querySelector('[data-arc]')?.addEventListener('click', ()=> archiveTask(t.id, bucket));
+  row.querySelector('[data-del]')?.addEventListener('click', ()=> deleteTask(t.id, bucket));
+  row.addEventListener('dragstart', e=>{ row.classList.add('drag'); e.dataTransfer.setData('text/plain', JSON.stringify({id:t.id, bucket})); });
+  row.addEventListener('dragend', ()=> row.classList.remove('drag'));
+  return row;
+}
 
-function toggleDone(id,bucket){ const list=state.tasks[bucket]; const t=list.find(x=>x.id===id); if(!t) return; if(t.done){ t.done=false; saveState(); renderAll(); return; } t.done=true; state.xpLog.unshift({ts:Date.now(), amount:t.XP, note:'Task: '+t.title}); // level up check
- while(state.xpLog.filter(l=>l.amount>0).reduce((s,l)=>s+l.amount,0) - state.xpLog.filter(l=>l.amount<0).reduce((s,l)=>s+Math.abs(l.amount),0) >= state.level*100){ state.level++; state.achievements.unshift({id:genId(), title:'Level '+state.level, ts:Date.now()}); alert('🎉 Level up! '+state.level); } saveState(); renderAll(); // notify server task complete
- if(typeof BOT_API_BASE!=='undefined' && BOT_API_BASE && !BOT_API_BASE.includes('REPLACE')){ fetch(BOT_API_BASE + '/task_completed', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({chat_id:'default', task:t})}).catch(e=>console.warn(e)); } }
+function addInboxTask(title, XP, stat, when){
+  state.tasks.inbox.unshift({id:genId(), title, XP, stat, when, done:false}); save(); render();
+  api('/register_reminder', {chat_id:'default', task: {title, XP, when}});
+}
 
-function archiveTask(id,bucket){ const list=state.tasks[bucket]; const idx=list.findIndex(x=>x.id===id); if(idx===-1) return; const [it]=list.splice(idx,1); state.tasks.archive.unshift(it); saveState(); renderAll(); }
-function deleteTask(id,bucket){ const list=state.tasks[bucket]; const idx=list.findIndex(x=>x.id===id); if(idx>-1) list.splice(idx,1); saveState(); renderAll(); }
-function moveTaskToBucket(id,from,to){ const src=state.tasks[from]; const idx=src.findIndex(x=>x.id===id); if(idx===-1) return; const [it]=src.splice(idx,1); state.tasks[to].unshift(it); saveState(); renderAll(); }
+function moveTask(id, from, to){
+  const src = state.tasks[from]; const idx = src.findIndex(x=>x.id===id); if(idx===-1) return;
+  const [it] = src.splice(idx,1); state.tasks[to].unshift(it); save(); render();
+}
 
-function buyReward(id){ const r=state.rewards.find(x=>x.id===id); if(!r) return; if(getBalance()>=r.cost && !r.bought){ r.bought=true; state.xpLog.unshift({ts:Date.now(), amount:-r.cost, note:'Bought: '+r.title}); state.achievements.unshift({id:genId(), title:'Bought: '+r.title, ts:Date.now()}); saveState(); renderAll(); alert('Куплено: '+r.title); } else alert('Недостаточно XP'); }
-function deleteReward(id){ const idx=state.rewards.findIndex(x=>x.id===id); if(idx>-1) state.rewards.splice(idx,1); saveState(); renderAll(); }
+function toggleDone(id, bucket){
+  const list = state.tasks[bucket]; const t=list.find(x=>x.id===id); if(!t) return;
+  if(t.done){ t.done=false; save(); render(); return; }
+  t.done=true; state.xp += t.XP; state.stats[t.stat||'STR'] = (state.stats[t.stat||'STR']||0) + Math.max(1, Math.round(t.XP/10));
+  state.xpLog.unshift({ts:Date.now(), amount:+t.XP, note:'Task: '+t.title});
+  while(state.xp >= state.xpToLevel){ state.xp -= state.xpToLevel; state.level++; state.xpToLevel = Math.round(state.xpToLevel * 1.1); state.achievements.unshift({id:genId(), title:'Новый уровень: '+state.level}); }
+  save(); render(); api('/task_completed', {chat_id:'default', task:{title:t.title, XP:t.XP}});
+}
 
-function getBalance(){ const pos=state.xpLog.filter(l=>l.amount>0).reduce((s,l)=>s+l.amount,0); const neg=state.xpLog.filter(l=>l.amount<0).reduce((s,l)=>s+Math.abs(l.amount),0); return pos - neg; }
+function archiveTask(id, bucket){ const list=state.tasks[bucket]; const idx=list.findIndex(x=>x.id===id); if(idx===-1) return; const [it]=list.splice(idx,1); state.tasks.archive.unshift(it); save(); render(); }
+function deleteTask(id, bucket){ const list=state.tasks[bucket]; const idx=list.findIndex(x=>x.id===id); if(idx>-1){ list.splice(idx,1); save(); render(); } }
 
-// init drop targets
-document.querySelectorAll('.col').forEach(c=>{ c.addEventListener('dragover', e=> e.preventDefault()); c.addEventListener('drop', e=>{ e.preventDefault(); try{ const data=JSON.parse(e.dataTransfer.getData('text/plain')); moveTaskToBucket(data.id, data.bucket, c.dataset.bucket); }catch(e){}}); });
+function buyReward(id){ const r=state.rewards.find(x=>x.id===id); if(!r) return; const bal=getBalanceXP(); if(bal>=r.cost && !r.bought){ r.bought=true; state.xpLog.unshift({ts:Date.now(), amount:-r.cost, note:'Buy: '+r.title}); save(); render(); alert('Куплено: '+r.title); } else alert('Недостаточно XP'); }
+function deleteReward(id){ const i=state.rewards.findIndex(x=>x.id===id); if(i>-1){ state.rewards.splice(i,1); save(); render(); } }
 
-// periodic client reminders (best-effort)
-setInterval(()=>{
-  const now = Date.now();
-  ['inbox','short','mid','long','boss'].forEach(bucket=> state.tasks[bucket].forEach(t=>{ if(t.when && !t.done){ const then=new Date(t.when).getTime(); if(then - now < 5*60*1000 && then - now > 0){ console.log('Reminder upcoming for', t.title); } } }));
-}, 60*1000);
+function getBalanceXP(){ const pos=state.xpLog.filter(l=>l.amount>0).reduce((s,l)=>s+l.amount,0); const neg=state.xpLog.filter(l=>l.amount<0).reduce((s,l)=>s+Math.abs(l.amount),0); return pos - neg; }
 
-renderAll();
+document.getElementById('inboxAdd').addEventListener('click', ()=>{
+  const t=document.getElementById('inboxText').value.trim(); if(!t) return;
+  const xp=Number(document.getElementById('inboxXP').value)||10;
+  const stat=document.getElementById('inboxStat').value||'STR';
+  const when=document.getElementById('inboxDate').value? new Date(document.getElementById('inboxDate').value).toISOString(): null;
+  addInboxTask(t,xp,stat,when);
+  document.getElementById('inboxText').value=''; document.getElementById('inboxXP').value='10'; document.getElementById('inboxDate').value='';
+});
+
+document.querySelectorAll('.col .list, #inboxList').forEach(list=>{
+  list.addEventListener('dragover', e=> e.preventDefault());
+  list.addEventListener('drop', e=>{ e.preventDefault(); try{ const data=JSON.parse(e.dataTransfer.getData('text/plain')); const targetBucket = list.id.replace('List',''); moveTask(data.id, data.bucket, targetBucket);}catch(err){} });
+});
+
+document.getElementById('saveAvatar').addEventListener('click', async ()=>{ const sel=document.getElementById('avatarSelect').value; state.avatar=sel; save(); render(); await api('/set_avatar', {chat_id:'default', avatar: sel}); });
+document.getElementById('avatarSelect').addEventListener('change', e=>{ document.getElementById('avatarImg').src = 'assets/'+e.target.value; });
+
+document.getElementById('askCoach').addEventListener('click', async ()=>{
+  const box=document.getElementById('coachIdeas'); box.innerHTML='<div class="idea">Думаю...</div>';
+  const resp = await api('/coach', {chat_id:'default', level: state.level, stats: state.stats, backlog: state.tasks.inbox.slice(0,5)});
+  let ideas=[]; if(resp && resp.ideas) ideas=resp.ideas; else ideas=["⚡ 15 минут чтения","✍️ 200 слов черновика","🎥 30 минут монтажа","📣 Запланировать пост"];
+  box.innerHTML=''; ideas.forEach(txt=>{ const b=document.createElement('div'); b.className='idea'; b.textContent=txt; b.addEventListener('click', ()=> addInboxTask(txt, 10, 'INT', null)); box.appendChild(b); });
+});
+
+render();

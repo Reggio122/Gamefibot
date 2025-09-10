@@ -3,80 +3,107 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Геймификатор v4</title>
+<title>RPG Gamifier v5</title>
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div class="app">
-  <header><h1>🎮 Геймификатор</h1></header>
+<body class="rpg">
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-left">
+      <img id="avatarImg" class="avatar" src="assets/hero1.png" alt="avatar">
+      <div class="avatar-actions">
+        <select id="avatarSelect">
+          <option value="hero1.png">Рыцарь</option>
+          <option value="hero2.png">Ассасин</option>
+          <option value="hero3.png">Маг</option>
+        </select>
+        <button id="saveAvatar">Сохранить</button>
+      </div>
+    </div>
+    <div class="hero-right">
+      <h1>⚔️ RPG Gamifier</h1>
+      <div class="stats">
+        <div class="stat">STR <span id="statSTR">0</span></div>
+        <div class="stat">INT <span id="statINT">0</span></div>
+        <div class="stat">CHA <span id="statCHA">0</span></div>
+      </div>
+      <div class="xpbar">
+        <div class="xpfill" id="xpFill" style="width:0%"></div>
+      </div>
+      <div class="level-line">Уровень: <strong id="levelNum">1</strong> • Баланс: <strong id="currentXP">0</strong> XP</div>
+      <div class="coach">
+        <button id="askCoach">🤖 Советчик</button>
+        <div id="coachIdeas" class="coach-ideas"></div>
+      </div>
+    </div>
+  </header>
 
-  <main>
-    <section class="inbox">
-      <h2>Inbox — быстрый ввод</h2>
+  <main class="grid">
+    <section class="card tavern">
+      <h2>📜 Inbox — входящие квесты</h2>
       <div class="add-row">
-        <input id="inboxText" placeholder="Новая задача..." />
+        <input id="inboxText" placeholder="Новый квест..." />
         <input id="inboxXP" type="number" placeholder="XP" value="10" />
+        <select id="inboxStat">
+          <option value="STR">STR</option>
+          <option value="INT">INT</option>
+          <option value="CHA">CHA</option>
+        </select>
         <input id="inboxDate" type="datetime-local" />
         <button id="inboxAdd">Добавить</button>
       </div>
+      <div id="inboxList" class="list"></div>
     </section>
 
-    <section class="board">
-      <div class="col" data-bucket="short">
-        <h3>Короткие ⚡</h3>
-        <div id="shortList" class="card-list" ondragover="event.preventDefault()"></div>
-        <div class="hint">Перетащи из Inbox сюда</div>
-      </div>
-      <div class="col" data-bucket="mid">
-        <h3>Средние 📅</h3>
-        <div id="midList" class="card-list" ondragover="event.preventDefault()"></div>
-      </div>
-      <div class="col" data-bucket="long">
-        <h3>Долгие 🏔️</h3>
-        <div id="longList" class="card-list" ondragover="event.preventDefault()"></div>
-      </div>
-      <div class="col" data-bucket="boss">
-        <h3>Босс 👑</h3>
-        <div id="bossList" class="card-list" ondragover="event.preventDefault()"></div>
+    <section class="card board">
+      <h2>Доска квестов</h2>
+      <div class="cols">
+        <div class="col" data-bucket="short">
+          <h3>Короткие ⚡</h3>
+          <div id="shortList" class="list"></div>
+        </div>
+        <div class="col" data-bucket="mid">
+          <h3>Средние 📅</h3>
+          <div id="midList" class="list"></div>
+        </div>
+        <div class="col" data-bucket="long">
+          <h3>Долгие 🏔️</h3>
+          <div id="longList" class="list"></div>
+        </div>
+        <div class="col" data-bucket="boss">
+          <h3>Боссы 👑</h3>
+          <div id="bossList" class="list"></div>
+        </div>
       </div>
     </section>
 
-    <section class="shop">
-      <h2>Магазин</h2>
-      <div id="shopList" class="card-list"></div>
+    <section class="card shop">
+      <h2>🧰 Лавка наград</h2>
+      <div id="shopList" class="list"></div>
       <div class="add-row">
         <input id="addRewardText" placeholder="Награда" />
-        <input id="addRewardCost" type="number" placeholder="Стоимость XP" value="50" />
-        <button id="addReward">Добавить награду</button>
+        <input id="addRewardCost" type="number" placeholder="XP" value="50" />
+        <button id="addReward">Добавить</button>
       </div>
     </section>
 
-    <section class="level">
-      <h2>Уровень</h2>
-      <div>Уровень: <span id="levelNum">1</span></div>
-      <div class="progress-bar"><div id="levelProgress" class="progress"></div></div>
-      <div>Баланс: <strong id="currentXP">0</strong> XP</div>
-    </section>
-
-    <section class="achievements">
-      <h2>Ачивки</h2>
-      <div id="achList" class="card-list"></div>
+    <section class="card achievements">
+      <h2>🏅 Трофеи</h2>
+      <div id="achList" class="badge-grid"></div>
       <div class="add-row">
-        <input id="addAchText" placeholder="Добавить ачивку (ручная)..." />
+        <input id="addAchText" placeholder="Своя ачивка..." />
         <button id="addAch">Добавить</button>
       </div>
     </section>
-
   </main>
 
-  <footer>
-    <small>Mini App v4 — требует публичный сервер для напоминаний (see README)</small>
+  <footer class="foot">
+    <small>RPG Gamifier v5 • Mini App + Bot API • <span id="apiStatus">API: offline</span></small>
   </footer>
 </div>
 
 <script>
-// BOT_API_BASE must be set to your bot server URL (e.g. https://reggio122.github.io/Gamefibot/)
-const BOT_API_BASE = "REPLACE_WITH_YOUR_BOT_API_URL";
+const BOT_API_BASE = "https://reggio122.github.io/Gamefibot/";
 </script>
 <script src="app.js"></script>
 </body>
