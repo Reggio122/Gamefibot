@@ -1,27 +1,122 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Геймификатор</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Геймификатор v3</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h2>🎮 Мой Геймификатор</h2>
+<div class="app">
+  <header>
+    <h1>🎮 Геймификатор</h1>
+    <nav class="tabs">
+      <button data-tab="tasks" class="tab active">Задачи</button>
+      <button data-tab="achievements" class="tab">Ачивки</button>
+      <button data-tab="shop" class="tab">Магазин</button>
+      <button data-tab="level" class="tab">Уровень</button>
+      <button id="openArchive" class="tab">Архив</button>
+    </nav>
+  </header>
 
-<h3>⚡ Задачи</h3>
-<div id="tasks"></div>
+  <main>
+    <!-- TASKS TAB -->
+    <section id="tasks" class="panel active">
+      <div class="columns">
+        <div class="col">
+          <h3>Короткие ⚡</h3>
+          <div id="shortList" class="card-list"></div>
+          <div class="add-row">
+            <input id="addShortText" placeholder="Добавить короткую задачу..." />
+            <input id="addShortXP" placeholder="XP" type="number" value="10" />
+            <button id="addShort">Добавить</button>
+          </div>
+        </div>
+        <div class="col">
+          <h3>Среднесрочные 📅</h3>
+          <div id="midList" class="card-list"></div>
+          <div class="add-row">
+            <input id="addMidText" placeholder="Добавить среднесрочную..." />
+            <input id="addMidXP" placeholder="XP" type="number" value="30" />
+            <button id="addMid">Добавить</button>
+          </div>
+        </div>
+        <div class="col">
+          <h3>Долгосрочные 🏔️</h3>
+          <div id="longList" class="card-list"></div>
+          <div class="add-row">
+            <input id="addLongText" placeholder="Добавить долгосрочную..." />
+            <input id="addLongXP" placeholder="XP" type="number" value="100" />
+            <button id="addLong">Добавить</button>
+          </div>
+        </div>
+        <div class="col">
+          <h3>Босс-цели 👑</h3>
+          <div id="bossList" class="card-list"></div>
+          <div class="add-row">
+            <input id="addBossText" placeholder="Добавить босс-цель..." />
+            <input id="addBossXP" placeholder="XP" type="number" value="500" />
+            <button id="addBoss">Добавить</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<h3>🏆 Опыт и уровень</h3>
-<p>XP: <span id="xp">0</span> | Уровень: <span id="level">1</span></p>
-<div class="progress-bar"><div class="progress" id="progress"></div></div>
+    <!-- ACHIEVEMENTS TAB -->
+    <section id="achievements" class="panel">
+      <h3>Ачивки</h3>
+      <div id="achList" class="card-list"></div>
+      <div class="add-row">
+        <input id="addAchText" placeholder="Добавить ачивку (ручная)..." />
+        <button id="addAch">Добавить ачивку</button>
+      </div>
+    </section>
 
-<h3>🎁 Магазин наград</h3>
-<div id="rewards"></div>
+    <!-- SHOP TAB -->
+    <section id="shop" class="panel">
+      <h3>Магазин наград</h3>
+      <div id="shopList" class="card-list"></div>
+      <div class="add-row">
+        <input id="addRewardText" placeholder="Название награды..." />
+        <input id="addRewardCost" placeholder="Стоимость XP" type="number" value="50" />
+        <button id="addReward">Добавить награду</button>
+      </div>
+      <h4>История покупок</h4>
+      <div id="purchaseHistory" class="card-list"></div>
+    </section>
 
-<h3>🥇 Ачивки</h3>
-<ul id="achievements"></ul>
+    <!-- LEVEL TAB -->
+    <section id="level" class="panel">
+      <h3>Уровень & Прогресс</h3>
+      <div class="level-box">
+        <div>Уровень: <span id="levelNum">1</span></div>
+        <div>Всего XP: <span id="totalXP">0</span></div>
+      </div>
+      <div class="progress-bar"><div id="levelProgress" class="progress"></div></div>
+      <h4>Лог опыта</h4>
+      <div id="xpLog" class="card-list"></div>
+      <div class="controls">
+        <button id="resetAll" class="danger">Сбросить всё</button>
+      </div>
+    </section>
 
-<script src="script.js"></script>
+    <!-- ARCHIVE MODAL -->
+    <div id="archiveModal" class="modal">
+      <div class="modal-content">
+        <h3>Архив</h3>
+        <div id="archiveList" class="card-list"></div>
+        <button id="closeArchive">Закрыть</button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="footer-left">Баланс: <strong id="currentXP">0</strong> XP</div>
+    <div class="footer-right">Подключено: Mini App</div>
+  </footer>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
