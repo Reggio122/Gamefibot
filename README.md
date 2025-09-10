@@ -1,16 +1,7 @@
-# RPG Gamifier v8 — D&D 16‑bit Edition
-- One-page Mini App with dragon background, soft indigo/rose/sky palette (no yellow/green borders).
-- LocalStorage state; Bot API hooks for reminders and AI coach.
-- Deploy frontend to GitHub Pages; backend to Render.
+# RPG Gamifier v10 — Solo Leveling Lite
+- Pop-up окна: "Квест выполнен", "LEVEL UP".
+- Ежедневные квесты: генерируются каждый день, предупреждение при пропуске.
+- Вложенные задачи для средне/долгосрочных квестов с прогресс-баром.
+- Полностью офлайн (GitHub Pages).
 
-Set in index.html:
-```js
-const BOT_API_BASE = "https://your-app.onrender.com";
-```
-
-Environment on Render:
-```
-BOT_TOKEN=123:ABC
-MINIAPP_URL=https://username.github.io/rpg-gamifier-v8/
-OPENAI_API_KEY=sk-... (optional)
-```
+Обнови GitHub Pages: замени файлы и добавь к ссылкам ?v=10, чтобы пробить кэш.

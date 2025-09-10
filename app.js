@@ -1,181 +1,203 @@
-// v8 core logic — clean rewrite
-const STORAGE_KEY = "rpg_v8_state";
-function genId(){ return 'id'+Math.random().toString(36).slice(2,9) }
-const fmtDate = (iso)=> iso? new Date(iso).toLocaleString() : '';
+// === v10 Solo Leveling Lite ===
+const STORAGE_KEY="rpg_v10_state";
+const todayKey = ()=> new Date().toISOString().slice(0,10);
+const rand = (a)=> a[Math.floor(Math.random()*a.length)];
+const ideaPool=[
+ "⚡ 15 минут чтения (+10 XP)","✍️ 200 слов (+10 XP)","🎥 30 минут монтажа (+20 XP)",
+ "📣 Запланировать пост (+10 XP)","🏃 1 км прогулки (+10 XP)","🧹 Навести порядок 10 мин (+10 XP)",
+ "🧠 1 упражнение для памяти (+10 XP)","🎧 1 образовательный подкаст (+10 XP)",
+ "🗂 Разобрать одну папку (+10 XP)","📝 Скетч сценария (+15 XP)","📷 Сделать фото для поста (+10 XP)"
+];
 
-const defaultState = {
-  xp:0, level:1, xpToLevel:100,
-  stats:{STR:0, INT:0, CHA:0},
+function genId(){return 'id'+Math.random().toString(36).slice(2,9)}
+
+const defaultState={
+  xp:0,level:1,xpToLevel:100,
+  stats:{STR:0,INT:0,CHA:0},
   avatar:"hero1.png",
-  tasks:{inbox:[], short:[], mid:[], long:[], boss:[], archive:[]},
-  rewards:[{id:genId(), title:"🍫 Сладость", cost:20, bought:false},{id:genId(), title:"☕ Час отдыха", cost:30, bought:false},{id:genId(), title:"🎮 Игровая сессия", cost:120, bought:false}],
-  achievements:[{id:genId(), title:"Добро пожаловать!"}],
-  xpLog:[]
+  tasks:{daily:[],inbox:[],short:[],mid:[],long:[],boss:[],archive:[]},
+  rewards:[{id:genId(),title:"🍫 Сладость",cost:20,bought:false}],
+  achievements:[{id:genId(),title:"Добро пожаловать!"}],
+  xpLog:[],
+  daily:{date:todayKey(), missed:false}
 };
 
-let state = load() || seedDefault();
+let state = load() || seed();
 
-function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)); }catch(e){ return null; } }
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function load(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY));}catch(e){return null}}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
 
-function seedDefault(){
-  const s = JSON.parse(JSON.stringify(defaultState));
-  s.tasks.short = [
-    {id:genId(), title:"Читать 15 минут", XP:10, stat:"INT", when:null, done:false},
-    {id:genId(), title:"Написать 200 слов", XP:10, stat:"INT", when:null, done:false},
-    {id:genId(), title:"Пройти 1км", XP:10, stat:"STR", when:null, done:false},
-    {id:genId(), title:"Написать 1 пост", XP:10, stat:"CHA", when:null, done:false}
+function seed(){
+  const s=JSON.parse(JSON.stringify(defaultState));
+  // sample chains for mid/long
+  s.tasks.mid=[
+    {id:genId(), title:"Записать подкаст", XP:30, stat:"CHA", done:false, subs:[
+      {id:genId(), title:"Подготовить план", XP:10, stat:"INT", done:false},
+      {id:genId(), title:"Запись 20 минут", XP:10, stat:"CHA", done:false},
+      {id:genId(), title:"Лёгкая чистка звука", XP:10, stat:"INT", done:false},
+    ]},
+    {id:genId(), title:"Смонтировать видео", XP:30, stat:"INT", done:false, subs:[
+      {id:genId(), title:"Отбор кадров", XP:10, stat:"INT", done:false},
+      {id:genId(), title:"Черновой монтаж", XP:10, stat:"INT", done:false},
+      {id:genId(), title:"Цвет/звук", XP:10, stat:"INT", done:false},
+    ]},
   ];
-  s.tasks.mid = [
-    {id:genId(), title:"Записать подкаст", XP:30, stat:"CHA", when:null, done:false},
-    {id:genId(), title:"Смонтировать видео", XP:30, stat:"INT", when:null, done:false},
-    {id:genId(), title:"Смонтировать подкаст", XP:30, stat:"INT", when:null, done:false}
+  s.tasks.long=[
+    {id:genId(), title:"Выложить видео по Героям Энвелла", XP:100, stat:"CHA", done:false, subs:[
+      {id:genId(), title:"Исследование темы", XP:20, stat:"INT", done:false},
+      {id:genId(), title:"Сценарий", XP:20, stat:"INT", done:false},
+      {id:genId(), title:"Запись и монтаж", XP:40, stat:"INT", done:false},
+      {id:genId(), title:"Обложка и описание", XP:20, stat:"CHA", done:false},
+    ]},
   ];
-  s.tasks.long = [
-    {id:genId(), title:"Выложить видео по Героям Энвелла", XP:100, stat:"CHA", when:null, done:false},
-    {id:genId(), title:"Выложить подкаст", XP:100, stat:"CHA", when:null, done:false}
+  s.tasks.short=[
+    {id:genId(), title:"Читать 15 минут", XP:10, stat:"INT", done:false},
+    {id:genId(), title:"Написать 200 слов", XP:10, stat:"INT", done:false},
+    {id:genId(), title:"Пройти 1км", XP:10, stat:"STR", done:false},
+    {id:genId(), title:"Написать 1 пост", XP:10, stat:"CHA", done:false}
   ];
-  s.tasks.boss = [{id:genId(), title:"Первое миллионое видео", XP:1000, stat:"CHA", when:null, done:false}];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); return s;
+  s.tasks.boss=[{id:genId(), title:"Первое миллионое видео", XP:1000, stat:"CHA", done:false}];
+  // initial dailies
+  s.tasks.daily = genDaily();
+  return s;
 }
 
-// API helper
-async function api(path, body){
-  const status = document.getElementById('apiStatus');
-  if(!window.BOT_API_BASE || String(window.BOT_API_BASE).includes("REPLACE")){ status.textContent='API: offline'; return null; }
-  status.textContent = 'API: online';
-  try{
-    const res = await fetch(window.BOT_API_BASE + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
-    return res.ok? res.json() : null;
-  }catch(e){ console.warn(e); return null; }
+function genDaily(){
+  // 3 unique random short tasks (as daily)
+  const picks=new Set(); while(picks.size<3){picks.add(rand(ideaPool));}
+  return Array.from(picks).map(txt=>({id:genId(), title:txt.replace(/\s*\(\+.*\)$/, ''), XP:10, stat:"INT", done:false}));
 }
 
-// Rendering
-function el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!==undefined) d.innerHTML = html; return d; }
-
-function taskRow(t, bucket){
-  const row = el('div','item'+(t.done?' done':''));
-  row.draggable = true; row.dataset.id = t.id; row.dataset.bucket = bucket;
-  row.innerHTML = `
-    <div>
-      <input type="checkbox" class="chk" ${t.done?'checked':''}>
-      <strong>${t.title}</strong>
-      <span class="meta">+${t.XP} XP • ${t.stat}${t.when? ' • ⏰ '+fmtDate(t.when): ''}</span>
-    </div>
-    <div>
-      <button class="btn" data-arc="${t.id}">📦</button>
-      <button class="btn" data-del="${t.id}">🗑</button>
-    </div>`;
-  row.querySelector('.chk').addEventListener('change', ()=> toggleDone(t.id, bucket));
-  row.querySelector('[data-arc]').addEventListener('click', ()=> archiveTask(t.id, bucket));
-  row.querySelector('[data-del]').addEventListener('click', ()=> deleteTask(t.id, bucket));
-  row.addEventListener('dragstart', e=>{ row.classList.add('drag'); e.dataTransfer.setData('text/plain', JSON.stringify({id:t.id, bucket})); });
-  row.addEventListener('dragend', ()=> row.classList.remove('drag'));
-  return row;
+function ensureDaily(){
+  const today=todayKey();
+  if(state.daily.date!==today){
+    // check missed
+    const allDone = state.tasks.daily.every(d=>d.done);
+    state.daily.missed = !allDone;
+    state.daily.date = today;
+    state.tasks.daily = genDaily();
+    save(); toast(state.daily.missed? "⚠️ Вчерашние ежедневные не закрыты":"☀️ Новый день — новые квесты!", state.daily.missed? 'warn':'success');
+  }
 }
 
-function render(){
-  // hud
-  document.getElementById('avatarImg').src = 'assets/'+state.avatar;
-  document.getElementById('statSTR').textContent = state.stats.STR;
-  document.getElementById('statINT').textContent = state.stats.INT;
-  document.getElementById('statCHA').textContent = state.stats.CHA;
-  document.getElementById('levelNum').textContent = state.level;
-  document.getElementById('currentXP').textContent = getBalanceXP();
-  const pct = Math.min(100, Math.round((state.xp/state.xpToLevel)*100));
-  document.getElementById('xpFill').style.width = pct+'%';
-  // inbox
-  const inbox = document.getElementById('inboxList'); inbox.innerHTML='';
-  state.tasks.inbox.forEach(t=> inbox.appendChild(taskRow(t,'inbox')));
-  // buckets
-  ['short','mid','long','boss'].forEach(b=>{
-    const list = document.getElementById(b+'List'); list.innerHTML='';
-    state.tasks[b].forEach(t=> list.appendChild(taskRow(t,b)));
-  });
-  // shop
-  const shop = document.getElementById('shopList'); shop.innerHTML='';
-  state.rewards.forEach(r=>{
-    const can = getBalanceXP() >= r.cost && !r.bought;
-    const row = el('div','item',`<div><strong>${r.title}</strong> <span class="meta">(${r.cost} XP)</span></div>
-      <div><button class="btn primary" ${can?'':'disabled'} data-buy="${r.id}">${r.bought?'✓':'Купить'}</button> <button class="btn" data-del="${r.id}">🗑</button></div>`);
-    row.querySelector('[data-buy]').addEventListener('click', ()=> buyReward(r.id));
-    row.querySelector('[data-del]').addEventListener('click', ()=> deleteReward(r.id));
-    shop.appendChild(row);
-  });
-  // achievements
-  const ach = document.getElementById('achList'); ach.innerHTML='';
-  state.achievements.forEach(a=> ach.appendChild(el('div','badge', a.title)));
+function toast(text, kind='success'){
+  const host=document.getElementById('toasts');
+  const t=document.createElement('div'); t.className='toast '+(kind==='level'?'level':kind==='warn'?'warn':'success');
+  t.textContent=text; host.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateY(-8px)'; setTimeout(()=> host.removeChild(t), 250)}, 2000);
 }
 
-// Actions
-function addInboxTask(title, XP, stat, when){
-  state.tasks.inbox.unshift({id:genId(), title, XP, stat, when, done:false}); save(); render();
-  api('/register_reminder', {chat_id:'default', task:{title, XP, when}});
-}
-function moveTask(id, from, to){
-  const src = state.tasks[from]; const idx = src.findIndex(x=>x.id===id); if(idx===-1) return;
-  const [it] = src.splice(idx,1); state.tasks[to].unshift(it); save(); render();
-}
-function toggleDone(id, bucket){
-  const list = state.tasks[bucket]; const t = list.find(x=>x.id===id); if(!t) return;
-  if(t.done){ t.done=false; save(); render(); return; }
-  t.done=true;
-  state.xp += t.XP;
-  const k = t.stat||'STR'; state.stats[k] = (state.stats[k]||0) + Math.max(1, Math.round(t.XP/10));
-  state.xpLog.unshift({ts:Date.now(), amount:t.XP, note:'Task: '+t.title});
+function addXP(amount, stat){
+  state.xp += amount;
+  state.stats[stat] = (state.stats[stat]||0) + Math.max(1, Math.round(amount/10));
+  state.xpLog.unshift({ts:Date.now(), amount, note:'+XP'});
   // level up
   while(state.xp >= state.xpToLevel){
-    state.xp -= state.xpToLevel; state.level++; state.xpToLevel = Math.round(state.xpToLevel*1.12);
-    state.achievements.unshift({id:genId(), title:'Новый уровень: '+state.level});
+    state.xp -= state.xpToLevel; state.level++; state.xpToLevel = Math.round(state.xpToLevel*1.15);
+    state.achievements.unshift({id:genId(), title:'LEVEL UP: '+state.level});
+    toast("⚡ LEVEL UP! Вы стали сильнее!", 'level');
   }
-  save(); render(); api('/task_completed', {chat_id:'default', task:{title:t.title, XP:t.XP}});
 }
-function archiveTask(id, bucket){ const list=state.tasks[bucket]; const idx=list.findIndex(x=>x.id===id); if(idx===-1) return; const [it]=list.splice(idx,1); state.tasks.archive.unshift(it); save(); render(); }
-function deleteTask(id, bucket){ const list=state.tasks[bucket]; const idx=list.findIndex(x=>x.id===id); if(idx>-1){ list.splice(idx,1); save(); render(); } }
 
-// Shop
-function buyReward(id){
-  const r = state.rewards.find(x=>x.id===id); if(!r) return;
-  const bal = getBalanceXP();
-  if(bal >= r.cost && !r.bought){ r.bought=true; state.xpLog.unshift({ts:Date.now(), amount:-r.cost, note:'Buy: '+r.title}); save(); render(); alert('Куплено: '+r.title); }
-  else alert('Недостаточно XP');
+function toggleSimple(bucket, id){
+  const list=state.tasks[bucket]; const t=list.find(x=>x.id===id); if(!t) return;
+  if(t.done){ t.done=false; save(); render(); return; }
+  t.done=true; addXP(t.XP, t.stat);
+  toast(`✅ Квест выполнен! +${t.XP} XP, +${t.stat}`,'success');
+  save(); render();
 }
-function deleteReward(id){ const i=state.rewards.findIndex(x=>x.id===id); if(i>-1){ state.rewards.splice(i,1); save(); render(); } }
 
-// Helpers
-function getBalanceXP(){ const pos=state.xpLog.filter(l=>l.amount>0).reduce((s,l)=>s+l.amount,0); const neg=state.xpLog.filter(l=>l.amount<0).reduce((s,l)=>s+Math.abs(l.amount),0); return pos-neg; }
+function toggleSub(parentBucket, parentId, subId){
+  const parent = state.tasks[parentBucket].find(x=>x.id===parentId); if(!parent) return;
+  const sub = parent.subs.find(s=>s.id===subId); if(!sub) return;
+  if(sub.done){ sub.done=false; save(); render(); return; }
+  sub.done=true; addXP(sub.XP, sub.stat);
+  toast(`✅ Подзадача выполнена! +${sub.XP} XP`,'success');
+  // check parent completion
+  if(parent.subs.every(s=>s.done) && !parent.done){
+    parent.done=true;
+    addXP(parent.XP, parent.stat);
+    toast(`🏁 Цепочка завершена: ${parent.title} (+${parent.XP} XP)`,'success');
+  }
+  save(); render();
+}
+
+function chainRow(chain, bucket){
+  const doneCount = chain.subs.filter(s=>s.done).length;
+  const total = chain.subs.length;
+  const pct = Math.round((doneCount/total)*100);
+  const wrap=document.createElement('div'); wrap.className='chain'+(chain.open?' open':'');
+  const title=document.createElement('div'); title.className='title'; title.innerHTML=`<strong>${chain.title}</strong><span class="meta">${doneCount}/${total}</span>`;
+  title.onclick=()=>{ chain.open=!chain.open; save(); render(); };
+  const bar=document.createElement('div'); bar.className='bar'; bar.innerHTML=`<div class="fill" style="width:${pct}%"></div>`;
+  const subs=document.createElement('div'); subs.className='subs';
+  chain.subs.forEach(s=>{
+    const row=document.createElement('div'); row.className='sub'+(s.done?' done':'');
+    row.innerHTML=`<div><input type="checkbox" ${s.done?'checked':''} onclick="toggleSub('${bucket}','${chain.id}','${s.id}')"> ${s.title} <span class="meta">+${s.XP} XP</span></div>`;
+    subs.appendChild(row);
+  });
+  wrap.appendChild(title); wrap.appendChild(bar); wrap.appendChild(subs);
+  return wrap;
+}
+
+// Render
+function render(){
+  ensureDaily();
+  document.getElementById('avatarImg').src='assets/'+state.avatar;
+  document.getElementById('statSTR').textContent=state.stats.STR;
+  document.getElementById('statINT').textContent=state.stats.INT;
+  document.getElementById('statCHA').textContent=state.stats.CHA;
+  document.getElementById('levelNum').textContent=state.level;
+  const bal = state.xpLog.reduce((s,l)=>s+l.amount,0); document.getElementById('currentXP').textContent=bal;
+  document.getElementById('xpFill').style.width=Math.min(100, Math.round(state.xp/state.xpToLevel*100))+'%';
+  // daily
+  const warn = document.getElementById('dailyWarn'); warn.classList.toggle('hide', !state.daily.missed);
+  const daily=document.getElementById('dailyList'); daily.innerHTML='';
+  state.tasks.daily.forEach(t=>{
+    const row=document.createElement('div'); row.className='item'+(t.done?' done':'');
+    row.innerHTML=`<div><input type="checkbox" ${t.done?'checked':''} onclick="toggleSimple('daily','${t.id}')"> ${t.title}</div>`;
+    daily.appendChild(row);
+  });
+  // inbox
+  const inbox=document.getElementById('inboxList'); inbox.innerHTML='';
+  state.tasks.inbox.forEach(t=>{
+    const row=document.createElement('div'); row.className='item'+(t.done?' done':'');
+    row.innerHTML=`<div><input type="checkbox" ${t.done?'checked':''} onclick="toggleSimple('inbox','${t.id}')"> ${t.title} <span class="meta">+${t.XP} XP</span></div>`;
+    inbox.appendChild(row);
+  });
+  // short simple
+  const mount=(id,bucket)=>{
+    const root=document.getElementById(id); root.innerHTML='';
+    state.tasks[bucket].forEach(t=>{
+      const row=document.createElement('div'); row.className='item'+(t.done?' done':'');
+      row.innerHTML=`<div><input type="checkbox" ${t.done?'checked':''} onclick="toggleSimple('${bucket}','${t.id}')"> ${t.title} <span class="meta">+${t.XP} XP</span></div>`;
+      root.appendChild(row);
+    });
+  };
+  mount('shortList','short'); mount('bossList','boss');
+  // chains
+  const mid=document.getElementById('midList'); mid.innerHTML=''; state.tasks.mid.forEach(c=> mid.appendChild(chainRow(c,'mid')));
+  const lang=document.getElementById('longList'); lang.innerHTML=''; state.tasks.long.forEach(c=> lang.appendChild(chainRow(c,'long')));
+}
 
 // UI bindings
-document.getElementById('inboxAdd').addEventListener('click', ()=>{
-  const t = document.getElementById('inboxText').value.trim(); if(!t) return;
-  const xp = Number(document.getElementById('inboxXP').value)||10;
-  const stat = document.getElementById('inboxStat').value||'STR';
-  const when = document.getElementById('inboxDate').value? new Date(document.getElementById('inboxDate').value).toISOString(): null;
-  addInboxTask(t,xp,stat,when);
-  document.getElementById('inboxText').value=''; document.getElementById('inboxXP').value='10'; document.getElementById('inboxDate').value='';
-});
-
-document.querySelectorAll('.col .list, #inboxList').forEach(list=>{
-  list.addEventListener('dragover', e=> e.preventDefault());
-  list.addEventListener('drop', e=>{
-    e.preventDefault();
-    try{ const data = JSON.parse(e.dataTransfer.getData('text/plain')); const target = list.id.replace('List',''); moveTask(data.id, data.bucket, target); }catch(err){}
-  });
-});
-
-document.getElementById('saveAvatar').addEventListener('click', async ()=>{
-  const sel = document.getElementById('avatarSelect').value;
-  state.avatar = sel; save(); render(); await api('/set_avatar', {chat_id:'default', avatar: sel});
-});
-document.getElementById('avatarSelect').addEventListener('change', e=>{ document.getElementById('avatarImg').src = 'assets/'+e.target.value; });
-
-document.getElementById('askCoach').addEventListener('click', async ()=>{
-  const box = document.getElementById('coachIdeas'); box.innerHTML = '<div class="idea">Мудрец размышляет…</div>';
-  const resp = await api('/coach', {chat_id:'default', level: state.level, stats: state.stats, backlog: state.tasks.inbox.slice(0,5)});
-  let ideas = [];
-  if(resp && resp.ideas) ideas = resp.ideas;
-  else ideas = ["⚡ 15 минут чтения", "✍️ 200 слов черновика", "🎥 30 минут монтажа", "📣 Запланировать пост"];
-  box.innerHTML=''; ideas.forEach(text=>{ const b=el('div','idea',text); b.addEventListener('click', ()=> addInboxTask(text, 10, 'INT', null)); box.appendChild(b); });
-});
+document.getElementById('avatarSelect').onchange=(e)=>{ state.avatar=e.target.value; save(); render(); };
+document.getElementById('inboxAdd').onclick=()=>{
+  const title=document.getElementById('inboxText').value.trim(); if(!title) return;
+  const XP=+document.getElementById('inboxXP').value||10; const stat=document.getElementById('inboxStat').value||'INT';
+  state.tasks.inbox.unshift({id:genId(), title, XP, stat, done:false}); save(); render();
+};
+document.getElementById('askCoach').onclick=()=>{
+  const box=document.getElementById('coachIdeas'); box.innerHTML='';
+  const picks=new Set(); while(picks.size<4){picks.add(Math.floor(Math.random()*ideaPool.length));}
+  Array.from(picks).forEach(i=>{const d=document.createElement('div'); d.className='idea'; d.textContent=ideaPool[i]; box.appendChild(d); });
+};
+document.getElementById('addReward').onclick=()=>{
+  const title=document.getElementById('addRewardText').value.trim(); const cost=+document.getElementById('addRewardCost').value||50;
+  if(!title) return; state.rewards.unshift({id:genId(), title, cost, bought:false}); save(); render();
+};
+document.getElementById('addAch').onclick=()=>{
+  const t=document.getElementById('addAchText').value.trim(); if(!t) return; state.achievements.unshift({id:genId(), title:t}); save(); render();
+};
 
 render();
