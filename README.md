@@ -1,7 +1,20 @@
-# RPG Gamifier v10 — Solo Leveling Lite
-- Pop-up окна: "Квест выполнен", "LEVEL UP".
-- Ежедневные квесты: генерируются каждый день, предупреждение при пропуске.
-- Вложенные задачи для средне/долгосрочных квестов с прогресс-баром.
-- Полностью офлайн (GitHub Pages).
+# RPG Gamifier v11 — Solo Leveling + Reminders + GPT
 
-Обнови GitHub Pages: замени файлы и добавь к ссылкам ?v=10, чтобы пробить кэш.
+## Frontend (GitHub Pages)
+- Ежедневные квесты, поп-апы, редактор подзадач (добавить/редактировать/удалять).
+- Звуки: success/level/warn.
+- Чтобы включить напоминания и GPT — укажи BOT_API_BASE в index.html на URL Render.
+
+## Backend (Render)
+- `bot.py` поднимает Flask API + бота.
+- Переменные окружения:
+  - BOT_TOKEN=123:ABC
+  - MINIAPP_URL=https://username.github.io/rpg-gamifier/
+  - OPENAI_API_KEY=sk-... (опционально)
+- Эндпоинты:
+  - POST /register_reminder {chat_id,title,when}
+  - POST /coach {chat_id,prompt,level,stats}
+  - /health
+
+## Assets
+- assets/success.wav, level.wav, warn.wav

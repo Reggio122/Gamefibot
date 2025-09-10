@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RPG Gamifier v10 — Solo Leveling Lite</title>
-<link rel="stylesheet" href="style.css?v=10">
+<title>RPG Gamifier v11 — Solo Leveling + Reminders</title>
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <div class="app">
@@ -23,14 +23,14 @@
       </div>
     </div>
     <div class="hud">
-      <h1>RPG Gamifier — v10</h1>
+      <h1>RPG Gamifier v11</h1>
       <div class="stats">
         <div class="stat">STR <span id="statSTR">0</span></div>
         <div class="stat">INT <span id="statINT">0</span></div>
         <div class="stat">CHA <span id="statCHA">0</span></div>
       </div>
       <div class="xpbar"><div class="xpfill" id="xpFill"></div></div>
-      <div class="meta">Уровень: <b id="levelNum">1</b> • Баланс: <b id="currentXP">0</b> XP</div>
+      <div class="meta">Уровень: <b id="levelNum">1</b> • Баланс: <b id="currentXP">0</b> XP • <span id="apiStatus">offline</span></div>
     </div>
   </header>
 
@@ -91,15 +91,23 @@
 
       <section class="panel">
         <h2>🧙 Совет мудреца</h2>
-        <button id="askCoach" class="btn primary">Получить совет</button>
+        <div class="add-row">
+          <input id="coachPrompt" placeholder="Введи запрос для мудреца (опционально)">
+          <button id="askCoach" class="btn primary">Получить совет</button>
+        </div>
         <div id="coachIdeas" class="coach-ideas"></div>
+        <div class="meta" id="apiHint">Чтобы GPT работал: задеплой бота на Render и укажи BOT_API_BASE.</div>
       </section>
     </div>
   </main>
 
-  <footer class="foot">RPG Gamifier v10 • Solo Leveling Lite • © You</footer>
+  <footer class="foot">RPG Gamifier v11 • Reminders + GPT Coach • © You</footer>
 </div>
 
-<script src="app.js?v=10"></script>
+<script>
+// Укажи свой backend при использовании Render (пример: "https://rpg-gamifier.onrender.com")
+const BOT_API_BASE = "REPLACE_WITH_YOUR_BOT_API_URL";
+</script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

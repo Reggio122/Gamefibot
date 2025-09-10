@@ -1,5 +1,5 @@
-// === v10 Solo Leveling Lite ===
-const STORAGE_KEY="rpg_v10_state";
+// === v11 Solo Leveling + Reminders + Editor + Sounds ===
+const STORAGE_KEY="rpg_v11_state";
 const todayKey = ()=> new Date().toISOString().slice(0,10);
 const rand = (a)=> a[Math.floor(Math.random()*a.length)];
 const ideaPool=[
@@ -8,6 +8,14 @@ const ideaPool=[
  "🧠 1 упражнение для памяти (+10 XP)","🎧 1 образовательный подкаст (+10 XP)",
  "🗂 Разобрать одну папку (+10 XP)","📝 Скетч сценария (+15 XP)","📷 Сделать фото для поста (+10 XP)"
 ];
+
+// Sounds
+const sounds = {
+  success: new Audio('assets/success.wav'),
+  level:   new Audio('assets/level.wav'),
+  warn:    new Audio('assets/warn.wav'),
+};
+function playSound(name){ try{ sounds[name].currentTime=0; sounds[name].play(); }catch(e){} }
 
 function genId(){return 'id'+Math.random().toString(36).slice(2,9)}
 
@@ -29,17 +37,11 @@ function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
 
 function seed(){
   const s=JSON.parse(JSON.stringify(defaultState));
-  // sample chains for mid/long
   s.tasks.mid=[
     {id:genId(), title:"Записать подкаст", XP:30, stat:"CHA", done:false, subs:[
       {id:genId(), title:"Подготовить план", XP:10, stat:"INT", done:false},
       {id:genId(), title:"Запись 20 минут", XP:10, stat:"CHA", done:false},
-      {id:genId(), title:"Лёгкая чистка звука", XP:10, stat:"INT", done:false},
-    ]},
-    {id:genId(), title:"Смонтировать видео", XP:30, stat:"INT", done:false, subs:[
-      {id:genId(), title:"Отбор кадров", XP:10, stat:"INT", done:false},
-      {id:genId(), title:"Черновой монтаж", XP:10, stat:"INT", done:false},
-      {id:genId(), title:"Цвет/звук", XP:10, stat:"INT", done:false},
+      {id:genId(), title:"Чистка звука", XP:10, stat:"INT", done:false},
     ]},
   ];
   s.tasks.long=[
@@ -57,90 +59,149 @@ function seed(){
     {id:genId(), title:"Написать 1 пост", XP:10, stat:"CHA", done:false}
   ];
   s.tasks.boss=[{id:genId(), title:"Первое миллионое видео", XP:1000, stat:"CHA", done:false}];
-  // initial dailies
   s.tasks.daily = genDaily();
   return s;
 }
 
+// Daily quests
 function genDaily(){
-  // 3 unique random short tasks (as daily)
   const picks=new Set(); while(picks.size<3){picks.add(rand(ideaPool));}
   return Array.from(picks).map(txt=>({id:genId(), title:txt.replace(/\s*\(\+.*\)$/, ''), XP:10, stat:"INT", done:false}));
 }
-
 function ensureDaily(){
   const today=todayKey();
   if(state.daily.date!==today){
-    // check missed
     const allDone = state.tasks.daily.every(d=>d.done);
     state.daily.missed = !allDone;
     state.daily.date = today;
     state.tasks.daily = genDaily();
-    save(); toast(state.daily.missed? "⚠️ Вчерашние ежедневные не закрыты":"☀️ Новый день — новые квесты!", state.daily.missed? 'warn':'success');
+    save();
+    toast(state.daily.missed? "⚠️ Вчерашние ежедневные не закрыты":"☀️ Новый день — новые квесты!", state.daily.missed? 'warn':'success');
+    playSound(state.daily.missed? 'warn':'success');
   }
 }
 
+// API helper (Reminders + GPT coach)
+async function api(path, body){
+  const el = document.getElementById('apiStatus');
+  if(!window.BOT_API_BASE || String(window.BOT_API_BASE).includes("REPLACE")){
+    el.textContent='offline'; return null;
+  }
+  el.textContent='online';
+  try{
+    const res = await fetch(window.BOT_API_BASE + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
+    return res.ok? res.json(): null;
+  }catch(e){ console.warn(e); return null; }
+}
+
+// Toasts
 function toast(text, kind='success'){
   const host=document.getElementById('toasts');
   const t=document.createElement('div'); t.className='toast '+(kind==='level'?'level':kind==='warn'?'warn':'success');
   t.textContent=text; host.appendChild(t);
-  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateY(-8px)'; setTimeout(()=> host.removeChild(t), 250)}, 2000);
+  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateY(-8px)'; setTimeout(()=> host.removeChild(t), 250)}, 2200);
 }
 
+// XP / Level
 function addXP(amount, stat){
   state.xp += amount;
   state.stats[stat] = (state.stats[stat]||0) + Math.max(1, Math.round(amount/10));
   state.xpLog.unshift({ts:Date.now(), amount, note:'+XP'});
-  // level up
   while(state.xp >= state.xpToLevel){
     state.xp -= state.xpToLevel; state.level++; state.xpToLevel = Math.round(state.xpToLevel*1.15);
     state.achievements.unshift({id:genId(), title:'LEVEL UP: '+state.level});
-    toast("⚡ LEVEL UP! Вы стали сильнее!", 'level');
+    toast("⚡ LEVEL UP! Вы стали сильнее!", 'level'); playSound('level');
   }
 }
 
+// Simple tasks
 function toggleSimple(bucket, id){
   const list=state.tasks[bucket]; const t=list.find(x=>x.id===id); if(!t) return;
   if(t.done){ t.done=false; save(); render(); return; }
   t.done=true; addXP(t.XP, t.stat);
-  toast(`✅ Квест выполнен! +${t.XP} XP, +${t.stat}`,'success');
+  toast(`✅ Квест выполнен! +${t.XP} XP, +${t.stat}`); playSound('success');
   save(); render();
 }
 
+// Chains: editor + toggles
 function toggleSub(parentBucket, parentId, subId){
   const parent = state.tasks[parentBucket].find(x=>x.id===parentId); if(!parent) return;
   const sub = parent.subs.find(s=>s.id===subId); if(!sub) return;
   if(sub.done){ sub.done=false; save(); render(); return; }
   sub.done=true; addXP(sub.XP, sub.stat);
-  toast(`✅ Подзадача выполнена! +${sub.XP} XP`,'success');
-  // check parent completion
+  toast(`✅ Подзадача: +${sub.XP} XP`); playSound('success');
   if(parent.subs.every(s=>s.done) && !parent.done){
-    parent.done=true;
-    addXP(parent.XP, parent.stat);
-    toast(`🏁 Цепочка завершена: ${parent.title} (+${parent.XP} XP)`,'success');
+    parent.done=true; addXP(parent.XP, parent.stat); toast(`🏁 Цепочка завершена: ${parent.title} (+${parent.XP} XP)`);
   }
   save(); render();
 }
+function editSub(parentBucket, parentId, subId){
+  const parent = state.tasks[parentBucket].find(x=>x.id===parentId); if(!parent) return;
+  const sub = parent.subs.find(s=>s.id===subId); if(!sub) return;
+  const title = prompt("Название подзадачи:", sub.title); if(title===null) return;
+  const XP = parseInt(prompt("XP:", sub.XP),10)||sub.XP;
+  const stat = prompt("Стат (STR/INT/CHA):", sub.stat)||sub.stat;
+  sub.title=title; sub.XP=XP; sub.stat=stat; save(); render();
+}
+function delSub(parentBucket, parentId, subId){
+  const parent = state.tasks[parentBucket].find(x=>x.id===parentId); if(!parent) return;
+  parent.subs = parent.subs.filter(s=>s.id!==subId); save(); render();
+}
+function addSub(parentBucket, parentId){
+  const parent = state.tasks[parentBucket].find(x=>x.id===parentId); if(!parent) return;
+  const title = prompt("Новая подзадача:"); if(!title) return;
+  const XP = parseInt(prompt("XP:", "10"),10)||10;
+  const stat = (prompt("Стат (STR/INT/CHA):", "INT")||"INT").toUpperCase();
+  parent.subs.push({id:genId(), title, XP, stat, done:false}); save(); render();
+}
+function editChain(parentBucket, parentId){
+  const chain = state.tasks[parentBucket].find(x=>x.id===parentId); if(!chain) return;
+  const title = prompt("Название цепочки:", chain.title); if(title===null) return;
+  const XP = parseInt(prompt("Бонус XP за завершение цепочки:", chain.XP),10)||chain.XP;
+  const stat = prompt("Стат (STR/INT/CHA):", chain.stat)||chain.stat;
+  chain.title=title; chain.XP=XP; chain.stat=stat; save(); render();
+}
+function delChain(parentBucket, parentId){
+  state.tasks[parentBucket] = state.tasks[parentBucket].filter(x=>x.id!==parentId); save(); render();
+}
 
+// Reminder helpers
+function scheduleReminder(task){
+  if(!task.when) return;
+  return api('/register_reminder', {chat_id:'default', task});
+}
+
+// Rendering
 function chainRow(chain, bucket){
   const doneCount = chain.subs.filter(s=>s.done).length;
   const total = chain.subs.length;
   const pct = Math.round((doneCount/total)*100);
   const wrap=document.createElement('div'); wrap.className='chain'+(chain.open?' open':'');
-  const title=document.createElement('div'); title.className='title'; title.innerHTML=`<strong>${chain.title}</strong><span class="meta">${doneCount}/${total}</span>`;
+  const title=document.createElement('div'); title.className='title';
+  title.innerHTML=`<strong>${chain.title}</strong><span class="meta">${doneCount}/${total}</span>`;
   title.onclick=()=>{ chain.open=!chain.open; save(); render(); };
   const bar=document.createElement('div'); bar.className='bar'; bar.innerHTML=`<div class="fill" style="width:${pct}%"></div>`;
   const subs=document.createElement('div'); subs.className='subs';
   chain.subs.forEach(s=>{
     const row=document.createElement('div'); row.className='sub'+(s.done?' done':'');
-    row.innerHTML=`<div><input type="checkbox" ${s.done?'checked':''} onclick="toggleSub('${bucket}','${chain.id}','${s.id}')"> ${s.title} <span class="meta">+${s.XP} XP</span></div>`;
+    row.innerHTML=`<div>
+       <input type="checkbox" ${s.done?'checked':''} onclick="toggleSub('${bucket}','${chain.id}','${s.id}')">
+       ${s.title} <span class="meta">+${s.XP} XP • ${s.stat}</span></div>
+       <div class="actions">
+         <button class="iconbtn" onclick="editSub('${bucket}','${chain.id}','${s.id}')">✏️</button>
+         <button class="iconbtn" onclick="delSub('${bucket}','${chain.id}','${s.id}')">🗑</button>
+       </div>`;
     subs.appendChild(row);
   });
-  wrap.appendChild(title); wrap.appendChild(bar); wrap.appendChild(subs);
+  const actions=document.createElement('div'); actions.style.marginTop='6px';
+  actions.innerHTML=`
+    <button class="iconbtn" onclick="addSub('${bucket}','${chain.id}')">➕ Подзадача</button>
+    <button class="iconbtn" onclick="editChain('${bucket}','${chain.id}')">✏️ Цепочка</button>
+    <button class="iconbtn" onclick="delChain('${bucket}','${chain.id}')">🗑 Цепочка</button>`;
+  wrap.appendChild(title); wrap.appendChild(bar); wrap.appendChild(subs); wrap.appendChild(actions);
   return wrap;
 }
 
-// Render
 function render(){
   ensureDaily();
   document.getElementById('avatarImg').src='assets/'+state.avatar;
@@ -161,8 +222,9 @@ function render(){
   // inbox
   const inbox=document.getElementById('inboxList'); inbox.innerHTML='';
   state.tasks.inbox.forEach(t=>{
+    const when = t.when? new Date(t.when).toLocaleString(): '';
     const row=document.createElement('div'); row.className='item'+(t.done?' done':'');
-    row.innerHTML=`<div><input type="checkbox" ${t.done?'checked':''} onclick="toggleSimple('inbox','${t.id}')"> ${t.title} <span class="meta">+${t.XP} XP</span></div>`;
+    row.innerHTML=`<div><input type="checkbox" ${t.done?'checked':''} onclick="toggleSimple('inbox','${t.id}')"> ${t.title} <span class="meta">+${t.XP} XP ${when? '• ⏰ '+when:''}</span></div>`;
     inbox.appendChild(row);
   });
   // short simple
@@ -182,15 +244,21 @@ function render(){
 
 // UI bindings
 document.getElementById('avatarSelect').onchange=(e)=>{ state.avatar=e.target.value; save(); render(); };
-document.getElementById('inboxAdd').onclick=()=>{
+document.getElementById('inboxAdd').onclick=async ()=>{
   const title=document.getElementById('inboxText').value.trim(); if(!title) return;
   const XP=+document.getElementById('inboxXP').value||10; const stat=document.getElementById('inboxStat').value||'INT';
-  state.tasks.inbox.unshift({id:genId(), title, XP, stat, done:false}); save(); render();
+  const whenVal=document.getElementById('inboxDate').value; const when = whenVal? new Date(whenVal).toISOString(): null;
+  const t={id:genId(), title, XP, stat, done:false, when};
+  state.tasks.inbox.unshift(t); save(); render();
+  if(when) await scheduleReminder({title, XP, when});
 };
-document.getElementById('askCoach').onclick=()=>{
-  const box=document.getElementById('coachIdeas'); box.innerHTML='';
-  const picks=new Set(); while(picks.size<4){picks.add(Math.floor(Math.random()*ideaPool.length));}
-  Array.from(picks).forEach(i=>{const d=document.createElement('div'); d.className='idea'; d.textContent=ideaPool[i]; box.appendChild(d); });
+document.getElementById('askCoach').onclick=async ()=>{
+  const prompt = (document.getElementById('coachPrompt').value||'').trim();
+  const box=document.getElementById('coachIdeas'); box.innerHTML='Мудрец размышляет…';
+  const resp = await api('/coach', {chat_id:'default', prompt, level:state.level, stats:state.stats});
+  if(resp && resp.ideas){ box.innerHTML=''; resp.ideas.slice(0,4).forEach(t=>{ const d=document.createElement('div'); d.className='idea'; d.textContent=t; box.appendChild(d); }); }
+  else { box.innerHTML=''; const picks=new Set(); while(picks.size<4){picks.add(Math.floor(Math.random()*ideaPool.length));}
+         Array.from(picks).forEach(i=>{const d=document.createElement('div'); d.className='idea'; d.textContent=ideaPool[i]; box.appendChild(d); }); }
 };
 document.getElementById('addReward').onclick=()=>{
   const title=document.getElementById('addRewardText').value.trim(); const cost=+document.getElementById('addRewardCost').value||50;
