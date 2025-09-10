@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RPG Gamifier v11 — Solo Leveling + Reminders</title>
-<link rel="stylesheet" href="style.css?v=11">
+<title>RPG Gamifier v12 — Boss Battle + Mini Avatar</title>
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <div class="app">
@@ -23,7 +23,7 @@
       </div>
     </div>
     <div class="hud">
-      <h1>RPG Gamifier v11</h1>
+      <h1>RPG Gamifier v12</h1>
       <div class="stats">
         <div class="stat">STR <span id="statSTR">0</span></div>
         <div class="stat">INT <span id="statINT">0</span></div>
@@ -32,6 +32,11 @@
       <div class="xpbar"><div class="xpfill" id="xpFill"></div></div>
       <div class="meta">Уровень: <b id="levelNum">1</b> • Баланс: <b id="currentXP">0</b> XP • <span id="apiStatus">offline</span></div>
     </div>
+
+    <div class="mini-hero">
+      <img id="miniAvatar" src="assets/hero1.png" class="mini" alt="mini">
+      <div id="mood" class="mood">🙂</div>
+    </div>
   </header>
 
   <main class="grid">
@@ -39,7 +44,7 @@
       <section class="panel">
         <h2>☀️ Ежедневные квесты</h2>
         <div id="dailyWarn" class="warn hide">⚠️ Вчерашние ежедневные квесты не были выполнены.</div>
-        <div id="dailyList" class="list"></div>
+        <div id="dailyList" class="list droppable" data-bucket="daily"></div>
       </section>
 
       <section class="panel">
@@ -55,21 +60,38 @@
           <input id="inboxDate" type="datetime-local" />
           <button id="inboxAdd" class="btn primary">Добавить</button>
         </div>
-        <div id="inboxList" class="list"></div>
+        <div id="inboxList" class="list droppable" data-bucket="inbox"></div>
       </section>
 
       <section class="panel board">
         <h2>🏰 Гильдия приключений</h2>
         <div class="cols">
-          <div class="col" data-bucket="short"><h3>⚔️ Мобы</h3><div id="shortList" class="list"></div></div>
-          <div class="col" data-bucket="mid"><h3>📜 Квесты (цепочки)</h3><div id="midList" class="list"></div></div>
-          <div class="col" data-bucket="long"><h3>🗺️ Кампания (цепочки)</h3><div id="longList" class="list"></div></div>
-          <div class="col" data-bucket="boss"><h3>🐉 Драконы</h3><div id="bossList" class="list"></div></div>
+          <div class="col"><h3>⚔️ Мобы</h3><div id="shortList" class="list droppable" data-bucket="short"></div></div>
+          <div class="col"><h3>📜 Квесты (цепочки)</h3><div id="midList" class="list"></div></div>
+          <div class="col"><h3>🗺️ Кампания (цепочки)</h3><div id="longList" class="list"></div></div>
+          <div class="col"><h3>🐉 Драконы</h3><div id="bossList" class="list droppable" data-bucket="boss"></div></div>
         </div>
       </section>
     </div>
 
     <div class="right-col">
+      <section class="panel">
+        <h2>🐲 Битва с боссом</h2>
+        <div class="boss-wrap">
+          <div class="boss-line">
+            <span id="bossName">Дракон Из Эпоса</span>
+            <span class="meta" id="bossHPText">HP 1000 / 1000</span>
+          </div>
+          <div class="bar boss"><div class="fill" id="bossHPFill" style="width:100%"></div></div>
+          <div class="add-row">
+            <input id="bossNameInput" placeholder="Имя босса">
+            <input id="bossHPMax" type="number" placeholder="HP" value="1000">
+            <button id="bossApply" class="btn">Обновить</button>
+            <button id="bossReset" class="btn">Сброс HP</button>
+          </div>
+        </div>
+      </section>
+
       <section class="panel">
         <h2>🧰 Лавка алхимика</h2>
         <div id="shopList" class="list"></div>
@@ -92,22 +114,21 @@
       <section class="panel">
         <h2>🧙 Совет мудреца</h2>
         <div class="add-row">
-          <input id="coachPrompt" placeholder="Введи запрос для мудреца (опционально)">
+          <input id="coachPrompt" placeholder="Запрос для мудреца (опционально)">
           <button id="askCoach" class="btn primary">Получить совет</button>
         </div>
         <div id="coachIdeas" class="coach-ideas"></div>
-        <div class="meta" id="apiHint">Чтобы GPT работал: задеплой бота на Render и укажи BOT_API_BASE.</div>
+        <div class="meta" id="apiHint">Чтобы GPT/напоминания работали: задеплой бота на Render и укажи BOT_API_BASE.</div>
       </section>
     </div>
   </main>
 
-  <footer class="foot">RPG Gamifier v11 • Reminders + GPT Coach • © You</footer>
+  <footer class="foot">RPG Gamifier v12 • Boss Battle + Mini Avatar • © You</footer>
 </div>
 
 <script>
-// Укажи свой backend при использовании Render (пример: "https://rpg-gamifier.onrender.com")
-const BOT_API_BASE = "REPLACE_WITH_YOUR_BOT_API_URL";
+const BOT_API_BASE = "https://rpg-gamifier-v7-1.onrender.com";
 </script>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
