@@ -3,17 +3,15 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RPG Gamifier v12 — Boss Battle + Mini Avatar</title>
-<link rel="stylesheet" href="style.css?v=12">
+<title>RPG Gamifier v14 — AI Mentor, Analytics & Gold</title>
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 <div class="app">
-
   <div class="toasts" id="toasts"></div>
-
   <header class="topbar">
     <div class="avatar-box">
-      <img id="avatarImg" class="avatar" src="assets/hero1.png" alt="avatar">
+      <img id="avatarMini" class="avatar-mini" src="assets/hero1.png" alt="mini">
       <div class="avatar-ctrl">
         <select id="avatarSelect">
           <option value="hero1.png">🛡️ Воин</option>
@@ -23,112 +21,44 @@
       </div>
     </div>
     <div class="hud">
-      <h1>RPG Gamifier v12</h1>
+      <h1>RPG Gamifier v14</h1>
       <div class="stats">
         <div class="stat">STR <span id="statSTR">0</span></div>
         <div class="stat">INT <span id="statINT">0</span></div>
         <div class="stat">CHA <span id="statCHA">0</span></div>
       </div>
       <div class="xpbar"><div class="xpfill" id="xpFill"></div></div>
-      <div class="meta">Уровень: <b id="levelNum">1</b> • Баланс: <b id="currentXP">0</b> XP • <span id="apiStatus">offline</span></div>
-    </div>
-
-    <div class="mini-hero">
-      <img id="miniAvatar" src="assets/hero1.png" class="mini" alt="mini">
-      <div id="mood" class="mood">🙂</div>
+      <div class="meta">
+        Уровень: <b id="levelNum">1</b> • XP: <b id="currentXP">0</b> •
+        <span class="gold">⭑ Золото: <b id="goldBalance">0</b></span> •
+        API: <span id="apiStatus">offline</span>
+      </div>
     </div>
   </header>
 
-  <main class="grid">
-    <div class="left-col">
-      <section class="panel">
-        <h2>☀️ Ежедневные квесты</h2>
-        <div id="dailyWarn" class="warn hide">⚠️ Вчерашние ежедневные квесты не были выполнены.</div>
-        <div id="dailyList" class="list droppable" data-bucket="daily"></div>
-      </section>
+  <nav class="tabs">
+    <button class="tab active" data-tab="board">Доска</button>
+    <button class="tab" data-tab="assistant">ИИ‑ассистент</button>
+    <button class="tab" data-tab="analytics">Аналитика</button>
+  </nav>
 
-      <section class="panel">
-        <h2>📜 Inbox — входящие квесты</h2>
-        <div class="add-row">
-          <input id="inboxText" placeholder="Новый квест..." />
-          <input id="inboxXP" type="number" placeholder="XP" value="10" />
-          <select id="inboxStat">
-            <option value="STR">STR</option>
-            <option value="INT">INT</option>
-            <option value="CHA">CHA</option>
-          </select>
-          <input id="inboxDate" type="datetime-local" />
-          <button id="inboxAdd" class="btn primary">Добавить</button>
-        </div>
-        <div id="inboxList" class="list droppable" data-bucket="inbox"></div>
-      </section>
-
-      <section class="panel board">
-        <h2>🏰 Гильдия приключений</h2>
-        <div class="cols">
-          <div class="col"><h3>⚔️ Мобы</h3><div id="shortList" class="list droppable" data-bucket="short"></div></div>
-          <div class="col"><h3>📜 Квесты (цепочки)</h3><div id="midList" class="list"></div></div>
-          <div class="col"><h3>🗺️ Кампания (цепочки)</h3><div id="longList" class="list"></div></div>
-          <div class="col"><h3>🐉 Драконы</h3><div id="bossList" class="list droppable" data-bucket="boss"></div></div>
-        </div>
-      </section>
-    </div>
-
-    <div class="right-col">
-      <section class="panel">
-        <h2>🐲 Битва с боссом</h2>
-        <div class="boss-wrap">
-          <div class="boss-line">
-            <span id="bossName">Дракон Из Эпоса</span>
-            <span class="meta" id="bossHPText">HP 1000 / 1000</span>
-          </div>
-          <div class="bar boss"><div class="fill" id="bossHPFill" style="width:100%"></div></div>
-          <div class="add-row">
-            <input id="bossNameInput" placeholder="Имя босса">
-            <input id="bossHPMax" type="number" placeholder="HP" value="1000">
-            <button id="bossApply" class="btn">Обновить</button>
-            <button id="bossReset" class="btn">Сброс HP</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>🧰 Лавка алхимика</h2>
-        <div id="shopList" class="list"></div>
-        <div class="add-row">
-          <input id="addRewardText" placeholder="Награда" />
-          <input id="addRewardCost" type="number" placeholder="XP" value="50" />
-          <button id="addReward" class="btn primary">Добавить</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>🏅 Трофеи</h2>
-        <div id="achList" class="badge-grid"></div>
-        <div class="add-row">
-          <input id="addAchText" placeholder="Своя ачивка..." />
-          <button id="addAch" class="btn">Добавить</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>🧙 Совет мудреца</h2>
-        <div class="add-row">
-          <input id="coachPrompt" placeholder="Запрос для мудреца (опционально)">
-          <button id="askCoach" class="btn primary">Получить совет</button>
-        </div>
-        <div id="coachIdeas" class="coach-ideas"></div>
-        <div class="meta" id="apiHint">Чтобы GPT/напоминания работали: задеплой бота на Render и укажи BOT_API_BASE.</div>
-      </section>
-    </div>
+  <main>
+    <section id="tab-board" class="tabpane active">
+      <p>Тут твоя доска задач и квестов.</p>
+    </section>
+    <section id="tab-assistant" class="tabpane">
+      <p>ИИ‑ассистент.</p>
+    </section>
+    <section id="tab-analytics" class="tabpane">
+      <p>Аналитика.</p>
+    </section>
   </main>
-
-  <footer class="foot">RPG Gamifier v12 • Boss Battle + Mini Avatar • © You</footer>
+  <footer class="foot">RPG Gamifier v14 • AI Mentor + Analytics + Gold • © You</footer>
 </div>
 
 <script>
 const BOT_API_BASE = "https://rpg-gamifier-v7-1.onrender.com";
 </script>
-<script src="app.js?v=12"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
