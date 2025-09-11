@@ -1,17 +1,104 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RPG Gamifier v14 — Prod</title>
-<link rel="stylesheet" href="style.css?v=14">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RPG Gamifier v15 — Clean</title>
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
-<div class="app">Загрузка RPG Gamifier v14...</div>
+<div class="app">
+  <header class="topbar">
+    <div class="logo">🐉 RPG Gamifier v15</div>
+    <div class="stats">
+      <span>LV <b id="lv">1</b></span>
+      <span>XP <b id="xp">0</b>/<b id="xpReq">100</b></span>
+      <span class="gold">⭑ <b id="gold">0</b></span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="board">Доска</button>
+    <button class="tab" data-tab="shop">Магазин</button>
+    <button class="tab" data-tab="assistant">ИИ‑ассистент</button>
+    <button class="tab" data-tab="analytics">Аналитика</button>
+  </nav>
+
+  <main>
+    <section id="tab-board" class="pane active">
+      <section class="panel">
+        <h2>📥 Inbox</h2>
+        <div class="row">
+          <input id="inTitle" placeholder="Задача">
+          <input id="inXP" type="number" min="0" value="10" title="XP">
+          <input id="inGold" type="number" min="0" value="5" title="Gold">
+          <input id="inWhen" type="datetime-local" title="Когда (опционально)">
+          <select id="inRepeat">
+            <option value="">без повтора</option>
+            <option value="DAILY">каждый день</option>
+            <option value="WEEKLY">каждую неделю</option>
+          </select>
+          <button id="addTask" class="btn primary">Добавить</button>
+        </div>
+        <div id="inbox" class="list droptarget" data-bucket="inbox"></div>
+      </section>
+
+      <section class="panel board">
+        <h2>🏰 Доска квестов</h2>
+        <div class="cols">
+          <div class="col"><h3>⚔️ Короткие</h3><div id="short" class="list droptarget" data-bucket="short"></div></div>
+          <div class="col"><h3>📜 Средние</h3><div id="mid" class="list droptarget" data-bucket="mid"></div></div>
+          <div class="col"><h3>🗺️ Долгие</h3><div id="long" class="list droptarget" data-bucket="long"></div></div>
+          <div class="col"><h3>🐉 Босс</h3><div id="boss" class="list droptarget" data-bucket="boss"></div></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-shop" class="pane">
+      <section class="panel">
+        <h2>🧰 Магазин (золото)</h2>
+        <div id="shop" class="list"></div>
+        <div class="row">
+          <input id="reTitle" placeholder="Награда">
+          <input id="reCost" type="number" min="1" value="30" title="Золото">
+          <button id="addReward" class="btn">Добавить</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-assistant" class="pane">
+      <section class="panel">
+        <h2>🤖 ИИ‑ассистент</h2>
+        <div class="row">
+          <textarea id="aiText" rows="3" placeholder="Опиши цель..."></textarea>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="aiBreak">Разбить на шаги</button>
+          <button class="btn" id="aiWeek">План на неделю</button>
+          <button class="btn" id="aiMotivate">Мотивация</button>
+        </div>
+        <div id="aiOut" class="list"></div>
+        <div class="hint">API: <span id="apiStatus">offline</span></div>
+      </section>
+    </section>
+
+    <section id="tab-analytics" class="pane">
+      <section class="panel">
+        <h2>📊 Аналитика</h2>
+        <div class="row small">XP по дням</div>
+        <canvas id="chartXP" height="140"></canvas>
+        <div class="row small">Золото по дням</div>
+        <canvas id="chartGold" height="140"></canvas>
+      </section>
+    </section>
+  </main>
+</div>
+
 <script>
+// ВСТАВЬ СВОЙ backend URL (Render):
 const BOT_API_BASE = "https://rpg-gamifier-v7-1.onrender.com";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>
