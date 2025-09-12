@@ -3,18 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RPG Gamifier — Solo Board</title>
-  <link rel="stylesheet" href="style.css?v=16" />
+  <title>RPG Gamifier — v17 (Subtasks + Avatar)</title>
+  <link rel="stylesheet" href="style.css?v=17" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
       <div class="brand">🐉 RPG Gamifier</div>
-      <div class="stats">
-        <span>LV <b id="lv">1</b></span>
-        <span>XP <b id="xp">0</b>/<b id="xpReq">100</b></span>
-        <span class="gold">⭑ <b id="gold">0</b></span>
+      <div class="hero">
+        <div id="avatar" class="avatar">
+          <div id="ava-emoji" class="emoji">😐</div>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-line"><span>LV</span> <b id="lv">1</b></div>
+          <div class="hero-line"><span>XP</span> <b id="xp">0</b>/<b id="xpReq">100</b></div>
+          <div class="hero-line gold"><span>⭑</span> <b id="gold">0</b></div>
+          <div class="hero-line mut"><span>Streak</span> <b id="streakTotal">0</b>d</div>
+          <div class="hero-line mut"><span>Сегодня</span> <b id="doneToday">0</b></div>
+        </div>
         <button id="reset" class="btn ghost" title="Сбросить локальные данные">Сброс</button>
       </div>
     </header>
@@ -59,7 +66,7 @@
             <div class="col"><h3>🗺️ Долгие</h3><div id="long" class="list droptarget" data-bucket="long"></div></div>
             <div class="col"><h3>🐉 Босс</h3><div id="boss" class="list droptarget" data-bucket="boss"></div></div>
           </div>
-          <div class="hint">Подсказка: перетаскивай карточки между колонками, как в Trello.</div>
+          <div class="hint">Подсказка: перетаскивай карточки между колонками, а внутри карточки добавляй подзадачи и следи за прогрессом.</div>
         </section>
       </section>
 
@@ -95,6 +102,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
