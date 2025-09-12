@@ -2,29 +2,99 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <title>RPG Gamifier MiniApp</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RPG Gamifier — Solo Board</title>
+  <link rel="stylesheet" href="style.css?v=16" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body style="font-family:sans-serif;max-width:600px;margin:40px auto;">
-  <h1>🐉 RPG Gamifier</h1>
-  <label>Задача:</label><br>
-  <input id="task" placeholder="Например: Читать 15 минут" style="width:100%;padding:8px"><br><br>
-  <label>Когда выполнить:</label><br>
-  <input id="when" type="datetime-local" style="width:100%;padding:8px"><br><br>
-  <button onclick="sendTask()" style="padding:10px 20px;font-size:16px;">Добавить задачу</button>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">🐉 RPG Gamifier</div>
+      <div class="stats">
+        <span>LV <b id="lv">1</b></span>
+        <span>XP <b id="xp">0</b>/<b id="xpReq">100</b></span>
+        <span class="gold">⭑ <b id="gold">0</b></span>
+        <button id="reset" class="btn ghost" title="Сбросить локальные данные">Сброс</button>
+      </div>
+    </header>
 
-  <script>
-    function sendTask() {
-      const task = document.getElementById("task").value;
-      const when = document.getElementById("when").value;
-      if (!task) return alert("Введите задачу");
-      Telegram.WebApp.sendData(JSON.stringify({
-        action: "add_task",
-        task,
-        when
-      }));
-      alert("Задача отправлена боту ✅");
-    }
-  </script>
+    <nav class="tabs">
+      <button class="tab active" data-tab="board">Доска</button>
+      <button class="tab" data-tab="shop">Магазин</button>
+      <button class="tab" data-tab="analytics">Аналитика</button>
+    </nav>
+
+    <main>
+      <section id="tab-board" class="pane active">
+        <section class="panel">
+          <h2>📥 Inbox</h2>
+          <div class="row">
+            <input id="title" placeholder="Задача или идея..." />
+            <select id="bucket">
+              <option value="inbox">Inbox</option>
+              <option value="short">Короткая</option>
+              <option value="mid">Средняя</option>
+              <option value="long">Долгая</option>
+              <option value="boss">Босс‑цель</option>
+            </select>
+            <input id="xpField" type="number" min="0" value="10" title="XP" />
+            <input id="goldField" type="number" min="0" value="5" title="Gold" />
+            <input id="whenField" type="datetime-local" />
+            <select id="repeatField" title="Повтор">
+              <option value="">без повтора</option>
+              <option value="DAILY">ежедневно</option>
+              <option value="WEEKLY">еженедельно</option>
+            </select>
+            <button id="add" class="btn primary">Добавить</button>
+          </div>
+          <div id="inbox" class="list droptarget" data-bucket="inbox"></div>
+        </section>
+
+        <section class="panel">
+          <h2>🏰 Доска квестов</h2>
+          <div class="cols">
+            <div class="col"><h3>⚔️ Короткие</h3><div id="short" class="list droptarget" data-bucket="short"></div></div>
+            <div class="col"><h3>📜 Средние</h3><div id="mid" class="list droptarget" data-bucket="mid"></div></div>
+            <div class="col"><h3>🗺️ Долгие</h3><div id="long" class="list droptarget" data-bucket="long"></div></div>
+            <div class="col"><h3>🐉 Босс</h3><div id="boss" class="list droptarget" data-bucket="boss"></div></div>
+          </div>
+          <div class="hint">Подсказка: перетаскивай карточки между колонками, как в Trello.</div>
+        </section>
+      </section>
+
+      <section id="tab-shop" class="pane">
+        <section class="panel">
+          <h2>🧰 Магазин наград</h2>
+          <div id="shop" class="list"></div>
+          <div class="row">
+            <input id="reTitle" placeholder="Награда (например, «Пицца»)" />
+            <input id="reCost" type="number" min="1" value="30" />
+            <button id="addReward" class="btn">Добавить</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="tab-analytics" class="pane">
+        <section class="panel">
+          <h2>📊 Аналитика</h2>
+          <div class="grid2">
+            <div>
+              <div class="row small">XP по дням</div>
+              <canvas id="chartXP" height="150"></canvas>
+            </div>
+            <div>
+              <div class="row small">Золото по дням</div>
+              <canvas id="chartGold" height="150"></canvas>
+            </div>
+          </div>
+          <div class="row small">Выполненные задачи (шт. в день)</div>
+          <canvas id="chartDone" height="120"></canvas>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js?v=16"></script>
 </body>
 </html>
